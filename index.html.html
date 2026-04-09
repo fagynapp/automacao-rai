@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STIVE — Automação RAI</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy: #0C1325; --navy2: #0e1a2e;
+    --blue-dark: #1E3A8A; --blue-mid: #306EE8;
+    --surface: #f0f2f5; --card: #ffffff;
+    --border: #e5e7eb; --border-light: #f3f4f6;
+    --text-primary: #111827; --text-secondary: #6b7280; --text-muted: #9ca3af;
+    --blue-bg: #eff6ff; --blue-border: #bfdbfe;
+    --green-bg: #d1fae5; --green-text: #065f46;
+    --amber-bg: #fef3c7; --amber-text: #92400e;
+    --red-bg: #fee2e2; --red-text: #991b1b;
+    --font: 'Inter', sans-serif; --mono: 'JetBrains Mono', monospace;
+  }
+  html { font-family: var(--font); font-size: 14px; }
+  body { background: var(--surface); color: var(--text-primary); min-height: 100vh; display: flex; flex-direction: column; }
+
+  .topbar { background: var(--navy); border-bottom: 1px solid rgba(255,255,255,0.07); height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; flex-shrink: 0; position: sticky; top: 0; z-index: 100; }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .shield-icon { width: 30px; height: 30px; }
+  .app-name { color: #fff; font-size: 15px; font-weight: 600; letter-spacing: 0.04em; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .avatar-circle { width: 32px; height: 32px; border-radius: 50%; background: var(--blue-dark); border: 1.5px solid var(--blue-mid); display: flex; align-items: center; justify-content: center; color: #93b4f0; font-size: 11px; font-weight: 600; }
+  .user-name { color: rgba(255,255,255,0.65); font-size: 12px; }
+
+  .layout { display: flex; flex: 1; min-height: 0; }
+  .sidebar { width: 200px; background: var(--navy2); border-right: 1px solid rgba(255,255,255,0.05); padding: 16px 0; flex-shrink: 0; }
+  .sidebar-group { margin-bottom: 8px; }
+  .sidebar-label { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.28); letter-spacing: 0.1em; text-transform: uppercase; padding: 8px 16px 4px; }
+  .nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 16px; font-size: 12px; color: rgba(255,255,255,0.45); cursor: pointer; transition: all 0.15s; user-select: none; border-left: 2px solid transparent; }
+  .nav-item:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.75); }
+  .nav-item.active { background: rgba(30,58,138,0.4); color: #fff; border-left-color: var(--blue-mid); }
+  .nav-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+  .main { flex: 1; overflow-y: auto; padding: 24px; }
+  .page-header { margin-bottom: 20px; }
+  .page-title { font-size: 17px; font-weight: 600; color: var(--navy); }
+  .page-sub { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  .card { background: var(--card); border-radius: 10px; border: 0.5px solid var(--border); overflow: hidden; margin-bottom: 14px; }
+  .card:last-child { margin-bottom: 0; }
+  .card-header { background: linear-gradient(135deg, #0C1325 0%, #1E3A8A 100%); padding: 13px 16px; display: flex; align-items: center; gap: 10px; }
+  .card-header-icon { width: 32px; height: 32px; background: rgba(255,255,255,0.12); border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .card-header-icon svg { width: 15px; height: 15px; stroke: #fff; }
+  .card-header-text { flex: 1; }
+  .card-title { color: #fff; font-size: 12px; font-weight: 600; }
+  .card-subtitle { color: rgba(255,255,255,0.55); font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; margin-top: 1px; }
+  .card-body { padding: 16px; }
+
+  .field { margin-bottom: 12px; }
+  .field:last-child { margin-bottom: 0; }
+  .field-label { display: block; font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 5px; }
+  .input, select, textarea { width: 100%; height: 38px; border: 1px solid var(--border); border-radius: 4px; background: #f9fafb; font-size: 13px; color: var(--text-primary); padding: 0 11px; font-family: var(--font); outline: none; transition: border-color 0.15s, background 0.15s; appearance: none; }
+  .input:focus, select:focus, textarea:focus { border-color: var(--blue-mid); background: #fff; box-shadow: 0 0 0 3px rgba(48,110,232,0.1); }
+  select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 32px; }
+  .input-code { font-family: var(--mono); font-size: 18px; letter-spacing: 0.25em; text-align: center; font-weight: 500; }
+  .row { display: flex; gap: 10px; }
+  .row .field { flex: 1; }
+
+  .alert { display: flex; align-items: flex-start; gap: 8px; background: var(--blue-bg); border: 1px solid var(--blue-border); border-radius: 6px; padding: 10px 12px; font-size: 12px; color: #1e40af; margin-bottom: 14px; line-height: 1.5; }
+  .alert svg { flex-shrink: 0; margin-top: 1px; width: 13px; height: 13px; stroke: #1e40af; }
+
+  .phone-tag { display: inline-flex; align-items: center; gap: 6px; background: var(--blue-bg); border: 1px solid var(--blue-border); border-radius: 4px; padding: 5px 10px; font-size: 12px; color: var(--blue-dark); font-weight: 500; margin-top: 8px; }
+  .phone-tag svg { width: 12px; height: 12px; stroke: currentColor; }
+  .divider { height: 1px; background: var(--border-light); margin: 14px 0; }
+
+  /* REGISTROS */
+  .registros-list { display: flex; flex-direction: column; gap: 10px; }
+  .registro-item { border: 1px solid var(--border); border-radius: 8px; background: #f9fafb; overflow: hidden; transition: border-color 0.15s; }
+  .registro-item.filled { border-color: var(--blue-mid); background: var(--blue-bg); }
+  .registro-header { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--border-light); background: rgba(255,255,255,0.6); }
+  .registro-item.filled .registro-header { border-bottom-color: #dbeafe; background: rgba(239,246,255,0.8); }
+  .reg-num { width: 22px; height: 22px; border-radius: 50%; background: var(--text-muted); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+  .registro-item.filled .reg-num { background: var(--blue-mid); }
+  .reg-title { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+  .registro-item.filled .reg-title { color: var(--blue-dark); }
+  .reg-legend { font-size: 11px; color: var(--text-muted); font-style: italic; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .registro-item.filled .reg-legend { color: #4a7fc4; }
+  .btn-remove-reg { background: none; border: none; cursor: pointer; color: #f87171; font-size: 11px; font-family: var(--font); padding: 2px 6px; border-radius: 3px; flex-shrink: 0; }
+  .btn-remove-reg:hover { background: #fee2e2; color: #dc2626; }
+  .registro-body { padding: 10px 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .reg-field label { display: block; font-size: 9px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+  .reg-field select, .reg-field input[type=time] { height: 34px; font-size: 12px; width: 100%; border: 1px solid var(--border); border-radius: 4px; background: #f9fafb; padding: 0 10px; font-family: var(--font); outline: none; appearance: none; }
+  .reg-field select:focus, .reg-field input[type=time]:focus { border-color: var(--blue-mid); background: #fff; }
+  .reg-field select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; padding-right: 28px; cursor: pointer; }
+  .info-display { display: flex; align-items: center; gap: 5px; background: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 0 9px; font-size: 12px; color: var(--text-secondary); height: 34px; font-family: var(--mono); overflow: hidden; }
+  .info-display.loaded { border-color: #86efac; background: #f0fdf4; color: #166534; }
+  .info-display.muted { font-family: var(--font); font-size: 11px; color: var(--text-muted); }
+  .add-registro-btn { display: flex; align-items: center; justify-content: center; gap: 6px; border: 1.5px dashed #d1d5db; border-radius: 8px; padding: 10px; font-size: 12px; color: #9ca3af; cursor: pointer; background: transparent; transition: all 0.15s; font-family: var(--font); width: 100%; }
+  .add-registro-btn:hover { border-color: var(--blue-mid); color: var(--blue-mid); background: var(--blue-bg); }
+
+  /* NATUREZAS */
+  .natureza-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  .natureza-item { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 6px; padding: 9px 11px; cursor: pointer; background: #f9fafb; transition: all 0.15s; user-select: none; }
+  .natureza-item:hover { border-color: #93c5fd; background: #f0f9ff; }
+  .natureza-item.selected { border-color: var(--blue-mid); background: var(--blue-bg); }
+  .nat-check { width: 16px; height: 16px; flex-shrink: 0; border: 1.5px solid #d1d5db; border-radius: 3px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+  .natureza-item.selected .nat-check { background: var(--blue-mid); border-color: var(--blue-mid); }
+  .nat-check-inner { display: none; width: 9px; height: 6px; border-left: 2px solid #fff; border-bottom: 2px solid #fff; transform: rotate(-45deg) translateY(-1px); }
+  .natureza-item.selected .nat-check-inner { display: block; }
+  .nat-label { font-size: 12px; color: var(--text-primary); line-height: 1.3; }
+
+  /* RELATO */
+  .relato-preview { background: #f8fafc; border: 1px solid var(--border); border-radius: 4px; padding: 12px 14px; font-size: 11.5px; font-family: var(--mono); color: var(--text-primary); line-height: 1.8; margin-top: 6px; min-height: 60px; word-break: break-word; }
+  .relato-var { color: var(--blue-mid); font-weight: 500; }
+  .relato-block { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed var(--border); }
+  .relato-block:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+  .relato-block-label { font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--font); margin-bottom: 5px; }
+  .relato-hint { font-size: 11px; color: var(--text-muted); margin-top: 6px; font-family: var(--font); }
+
+  /* HISTÓRICO */
+  .hist-empty { font-size: 12px; color: var(--text-muted); text-align: center; padding: 16px 0; }
+  .hist-row { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 0.5px solid var(--border-light); font-size: 12px; }
+  .hist-row:last-child { border-bottom: none; }
+  .hist-date { color: var(--text-muted); min-width: 70px; font-size: 11px; flex-shrink: 0; }
+  .hist-local { color: var(--text-primary); font-weight: 500; flex: 1; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hist-time { color: var(--text-secondary); min-width: 40px; font-family: var(--mono); font-size: 11px; flex-shrink: 0; }
+  .hist-rai { font-family: var(--mono); color: var(--blue-dark); font-weight: 600; font-size: 12px; flex-shrink: 0; }
+  .badge { display: inline-flex; align-items: center; font-size: 10px; border-radius: 100px; padding: 2px 8px; font-weight: 600; flex-shrink: 0; }
+  .badge-ok { background: var(--green-bg); color: var(--green-text); }
+  .badge-err { background: var(--red-bg); color: var(--red-text); }
+  .btn-copy { background: var(--blue-bg); border: 1px solid var(--blue-border); border-radius: 4px; padding: 3px 8px; font-size: 11px; color: var(--blue-dark); cursor: pointer; font-family: var(--font); transition: all 0.15s; flex-shrink: 0; }
+  .btn-copy:hover { background: #dbeafe; }
+  .btn-copy:disabled { opacity: 0.4; cursor: default; }
+
+  /* PROGRESS */
+  .progress-wrap { display: none; margin-top: 14px; }
+  .progress-wrap.show { display: block; }
+  .progress-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .progress-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--blue-mid); border-radius: 2px; transition: width 0.4s ease; }
+  .progress-steps { margin-top: 10px; }
+  .progress-step { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 11px; color: var(--text-muted); }
+  .progress-step.done { color: var(--green-text); }
+  .progress-step.running { color: var(--blue-mid); }
+  .step-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+  .step-dot.spin { animation: spin 1s linear infinite; background: none; border: 2px solid var(--blue-mid); border-top-color: transparent; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .btn-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; border-radius: 4px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: var(--font); border: 1px solid var(--border); background: transparent; color: var(--text-secondary); transition: all 0.15s; }
+  .btn:hover { background: var(--border-light); }
+  .btn-primary { background: var(--blue-dark); color: #fff; border-color: var(--blue-dark); }
+  .btn-primary:hover { background: var(--blue-mid); border-color: var(--blue-mid); }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn svg { width: 13px; height: 13px; }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; background: #111827; color: #fff; border-radius: 8px; padding: 10px 16px; font-size: 12px; font-weight: 500; opacity: 0; transform: translateY(8px); transition: all 0.25s; z-index: 999; pointer-events: none; max-width: 280px; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <svg class="shield-icon" viewBox="0 0 30 30" fill="none">
+      <path d="M15 2L4 6.5v9c0 7 4.8 13.5 11 15 6.2-1.5 11-8 11-15v-9L15 2z" fill="#1E3A8A" stroke="#306EE8" stroke-width="1.2"/>
+      <path d="M10 15l3.5 3.5 7-7" stroke="#418CFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="app-name">STIVE</span>
+  </div>
+  <div class="topbar-right">
+    <div class="avatar-circle">CB</div>
+    <span class="user-name">Cb Fabrício</span>
+  </div>
+</div>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-group">
+      <div class="sidebar-label">Operacional</div>
+      <div class="nav-item"><div class="nav-dot"></div>Dashboard</div>
+      <div class="nav-item"><div class="nav-dot"></div>Escala</div>
+      <div class="nav-item"><div class="nav-dot"></div>Cautelamento</div>
+      <div class="nav-item active"><div class="nav-dot"></div>Automação RAI</div>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-label">Relatórios</div>
+      <div class="nav-item"><div class="nav-dot"></div>Histórico</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <div class="page-title">Automação RAI</div>
+      <div class="page-sub">Registro automático de atendimento no sistema SSP-GO</div>
+    </div>
+
+    <div class="grid-2">
+
+      <div>
+        <!-- AUTH -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-icon">
+              <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div class="card-header-text">
+              <div class="card-title">Autenticação SSP-GO</div>
+              <div class="card-subtitle">Uma vez por turno</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="alert">
+              <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+              Suas credenciais são usadas apenas para login e nunca ficam salvas no sistema.
+            </div>
+            <div class="row">
+              <div class="field">
+                <label class="field-label">Usuário</label>
+                <input class="input" type="text" id="usuario" placeholder="usuario.pm" autocomplete="off">
+              </div>
+              <div class="field">
+                <label class="field-label">Senha</label>
+                <input class="input" type="password" id="senha" placeholder="••••••••">
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label">Código Google Authenticator</label>
+              <input class="input input-code" type="text" id="auth-code" placeholder="000 000" maxlength="7" autocomplete="off">
+            </div>
+          </div>
+        </div>
+
+        <!-- ÁREA E VIATURA -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-icon">
+              <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <div class="card-header-text">
+              <div class="card-title">Área de atuação e viatura</div>
+              <div class="card-subtitle">Identificação da equipe</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="field">
+              <label class="field-label">Área de patrulhamento</label>
+              <select id="area-select" onchange="onAreaChange()">
+                <option value="">— Selecione a área —</option>
+                <option value="1">Área I — T. Vera Cruz / T. Pe. Pelágio / Est. Anicuns</option>
+                <option value="2">Área II — T. Dergo / T. Praça A / Est. Joquei Clube</option>
+                <option value="3">Área III — Est. Bandeirante Oeste / T. Praça da Bíblia / T. Novo Mundo</option>
+                <option value="4">Área IV — T. Isidória / T. Bandeiras / T. Gyn Viva / T. Pq Oeste</option>
+                <option value="5">Área V — Região da 44 / T. Paulo Garcia / T. Hailé Pinheiro / T. Recanto do Bosque</option>
+              </select>
+              <div class="phone-tag" id="phone-tag" style="display:none">
+                <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.1a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.21h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.1 6.1l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
+                <span id="phone-num"></span>
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label">Número da viatura</label>
+              <input class="input" type="text" id="viatura" placeholder="Ex: 815253" oninput="updateRelato()">
+            </div>
+          </div>
+        </div>
+
+        <!-- REGISTROS -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-icon">
+              <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            </div>
+            <div class="card-header-text">
+              <div class="card-title">Registros — local e horário</div>
+              <div class="card-subtitle">Até 5 RAIs · um local por registro</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="registros-list" id="registros-list"></div>
+            <div style="margin-top:10px">
+              <button class="add-registro-btn" id="add-reg-btn" onclick="addRegistro()">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Adicionar registro
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <!-- NATUREZAS -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-icon">
+              <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </div>
+            <div class="card-header-text">
+              <div class="card-title">Naturezas da ocorrência</div>
+              <div class="card-subtitle">Aplicada a todos os registros</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="natureza-grid" id="natureza-grid"></div>
+          </div>
+        </div>
+
+        <!-- RELATO -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-icon">
+              <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </div>
+            <div class="card-header-text">
+              <div class="card-title">Relato PM — pré-visualização</div>
+              <div class="card-subtitle">Um bloco por registro</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="relato-preview" id="relato-preview">
+              <span style="color:var(--text-muted);font-family:var(--font);font-size:12px;">Configure os registros, viatura e naturezas para visualizar.</span>
+            </div>
+            <div class="relato-hint">Um relato por natureza · aplicado a cada local selecionado</div>
+          </div>
+        </div>
+
+        <!-- HISTÓRICO -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-icon">
+              <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div class="card-header-text">
+              <div class="card-title">RAIs registradas hoje</div>
+              <div class="card-subtitle">Clique em copiar para enviar ao superior</div>
+            </div>
+          </div>
+          <div class="card-body" id="historico-body">
+            <div class="hist-empty">Nenhuma RAI gerada ainda hoje.</div>
+          </div>
+        </div>
+
+        <div class="progress-wrap" id="progress-wrap">
+          <div class="progress-label">
+            <span id="progress-text">Iniciando...</span>
+            <span id="progress-pct">0%</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+          <div class="progress-steps" id="progress-steps"></div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn" onclick="limpar()">Limpar</button>
+          <button class="btn btn-primary" id="btn-executar" onclick="executar()">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Executar automação
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const AREAS = {
+  '1': { label: 'Área I',   phone: '62 9 9641-4977' },
+  '2': { label: 'Área II',  phone: '62 9 9681-7279' },
+  '3': { label: 'Área III', phone: '62 9 9968-6674' },
+  '4': { label: 'Área IV',  phone: '62 9 9660-6902' },
+  '5': { label: 'Área V',   phone: '62 9 9969-7361' }
+};
+
+const LOCAIS_GRUPOS = [
+  { grupo: 'Terminais', itens: [
+    { id: 'term-vera-cruz',    label: 'Terminal Vera Cruz',       bairro: 'Goiânia',                   cep: '74675-060' },
+    { id: 'term-pe-pelagio',   label: 'Terminal Padre Pelágio',   bairro: 'Bairro Ipiranga',            cep: '74423-020' },
+    { id: 'term-dergo',        label: 'Terminal Dergo',           bairro: 'Setor Rodoviário',           cep: '74073-010' },
+    { id: 'term-praca-a',      label: 'Terminal Praça A',         bairro: 'Setor Campinas',             cep: '74503-010' },
+    { id: 'term-praca-biblia', label: 'Terminal Praça da Bíblia', bairro: 'Setor Leste Universitário', cep: '74605-010' },
+    { id: 'term-novo-mundo',   label: 'Terminal Novo Mundo',      bairro: 'Jardim Novo Mundo',          cep: '74707-060' },
+    { id: 'term-goianira',     label: 'Terminal Goianira',        bairro: 'Goianira',                  cep: '75390-000' },
+    { id: 'term-sen-canedo',   label: 'Terminal Senador Canedo',  bairro: 'Senador Canedo',             cep: '75250-000' },
+    { id: 'term-trindade',     label: 'Terminal Trindade',        bairro: 'Trindade',                  cep: '75380-000' },
+  ]},
+  { grupo: 'Estações', itens: [
+    { id: 'est-iquego',        label: 'Estação Iquego',           bairro: 'Bairro Ipiranga',            cep: '74423-010' },
+    { id: 'est-capuava',       label: 'Estação Capuava',          bairro: 'Bairro Ipiranga',            cep: '74423-050' },
+    { id: 'est-anicuns',       label: 'Estação Anicuns',          bairro: 'Setor Esplanada do Anicuns', cep: '74690-250' },
+    { id: 'est-cascavel',      label: 'Estação Cascavel',         bairro: 'Setor Rodoviário',           cep: '74073-020' },
+    { id: 'est-jose-hermano',  label: 'Estação José Hermano',     bairro: 'Setor Campinas',             cep: '74503-020' },
+    { id: 'est-campinas',      label: 'Estação Campinas',         bairro: 'Setor Campinas',             cep: '74503-030' },
+    { id: 'est-24-outubro',    label: 'Estação 24 de Outubro',    bairro: 'Setor Campinas',             cep: '74503-040' },
+    { id: 'est-lago-rosas',    label: 'Estação Lago das Rosas',   bairro: 'Setor Aeroporto',            cep: '74075-010' },
+    { id: 'est-hgg',           label: 'Estação HGG',              bairro: 'Setor Aeroporto',            cep: '74075-020' },
+    { id: 'est-joquei',        label: 'Estação Jóquei Clube',     bairro: 'Setor Central',              cep: '74013-010' },
+    { id: 'est-rua-8',         label: 'Estação Rua 8',            bairro: 'Setor Central',              cep: '74013-020' },
+    { id: 'est-rua-7',         label: 'Estação Rua 7',            bairro: 'Setor Central',              cep: '74013-030' },
+    { id: 'est-rua-20',        label: 'Estação Rua 20',           bairro: 'Setor Central',              cep: '74013-040' },
+    { id: 'est-botafogo',      label: 'Estação Botafogo',         bairro: 'Setor Universitário',        cep: '74605-020' },
+    { id: 'est-universitaria', label: 'Estação Universitária',    bairro: 'Setor Vila Nova',            cep: '74643-010' },
+    { id: 'est-v-bandeirantes',label: 'Estação Vila Bandeirantes',bairro: 'Vila Bandeirante',           cep: '74445-010' },
+    { id: 'est-v-morais',      label: 'Estação Vila Morais',      bairro: 'Vila Morais',                cep: '74445-020' },
+    { id: 'est-palmito',       label: 'Estação Palmito',          bairro: 'Jardim Novo Mundo',          cep: '74707-030' },
+    { id: 'est-anhanguera',    label: 'Estação Anhanguera',       bairro: 'Jardim Novo Mundo',          cep: '74707-040' },
+  ]}
+];
+
+const LOCAIS_MAP = {};
+LOCAIS_GRUPOS.forEach(g => g.itens.forEach(i => { LOCAIS_MAP[i.id] = i; }));
+
+const NATUREZAS = [
+  { id: 'patrulhamento',     label: 'Patrulhamento',           relato: 'REALIZA PATRULHAMENTO' },
+  { id: 'estacionamento',    label: 'Ponto de estacionamento', relato: 'REALIZA PONTO DE ESTACIONAMENTO POLICIAL MILITAR' },
+  { id: 'abordagem-pessoa',  label: 'Abordagem a pessoa',      relato: 'REALIZA ABORDAGEM A PESSOA' },
+  { id: 'abordagem-veiculo', label: 'Abordagem a veículo',     relato: 'REALIZA ABORDAGEM A VEÍCULO' },
+  { id: 'apoio',             label: 'Apoio a unidade',         relato: 'REALIZA APOIO A UNIDADE' },
+  { id: 'verificacao',       label: 'Verificação de local',    relato: 'REALIZA VERIFICAÇÃO DE LOCAL' },
+];
+
+let registros = [{ local: '', horario: '12:00' }];
+let selectedNat = new Set(['patrulhamento', 'estacionamento']);
+let historico = [];
+
+function buildLocalOptions(selectedId) {
+  let html = '<option value="">— Selecione o local —</option>';
+  LOCAIS_GRUPOS.forEach(g => {
+    html += `<optgroup label="${g.grupo}">`;
+    g.itens.forEach(i => {
+      html += `<option value="${i.id}"${selectedId === i.id ? ' selected' : ''}>${i.label} — ${i.bairro}</option>`;
+    });
+    html += '</optgroup>';
+  });
+  return html;
+}
+
+function renderRegistros() {
+  const list = document.getElementById('registros-list');
+  list.innerHTML = '';
+
+  registros.forEach((r, i) => {
+    const filled = !!r.local;
+    const loc = LOCAIS_MAP[r.local] || null;
+    const legend = loc ? `${loc.label} · ${loc.bairro}` : 'Selecione o local abaixo';
+
+    const div = document.createElement('div');
+    div.className = 'registro-item' + (filled ? ' filled' : '');
+    div.innerHTML = `
+      <div class="registro-header">
+        <div class="reg-num">${i + 1}</div>
+        <span class="reg-title">RAI ${i + 1}</span>
+        <span class="reg-legend">${legend}</span>
+        ${registros.length > 1 ? `<button class="btn-remove-reg" onclick="removeRegistro(${i})">remover</button>` : ''}
+      </div>
+      <div class="registro-body">
+        <div class="reg-field" style="grid-column:1/-1">
+          <label>Local do patrulhamento</label>
+          <select onchange="onLocalChange(${i}, this.value)">${buildLocalOptions(r.local)}</select>
+        </div>
+        <div class="reg-field">
+          <label>Horário do registro</label>
+          <input type="time" value="${r.horario}" onchange="registros[${i}].horario=this.value; updateRelato();">
+        </div>
+        <div class="reg-field">
+          <label>CEP (automático)</label>
+          <div class="info-display ${loc ? 'loaded' : 'muted'}">
+            ${loc
+              ? `<svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>&nbsp;${loc.cep}`
+              : 'Aguardando seleção...'}
+          </div>
+        </div>
+        <div class="reg-field" style="grid-column:1/-1">
+          <label>Bairro / Setor (automático)</label>
+          <div class="info-display ${loc ? 'loaded' : 'muted'}">
+            ${loc
+              ? `<svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>&nbsp;${loc.bairro} — Goiânia / GO`
+              : 'Aguardando seleção...'}
+          </div>
+        </div>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+
+  document.getElementById('add-reg-btn').style.display = registros.length >= 5 ? 'none' : 'flex';
+  updateRelato();
+}
+
+function onLocalChange(i, val) {
+  registros[i].local = val;
+  renderRegistros();
+}
+
+function addRegistro() {
+  if (registros.length >= 5) return;
+  const proxHora = String(12 + registros.length).padStart(2,'0') + ':00';
+  registros.push({ local: '', horario: proxHora });
+  renderRegistros();
+}
+
+function removeRegistro(i) {
+  registros.splice(i, 1);
+  renderRegistros();
+}
+
+function onAreaChange() {
+  const v = document.getElementById('area-select').value;
+  const tag = document.getElementById('phone-tag');
+  if (v && AREAS[v]) {
+    document.getElementById('phone-num').textContent = AREAS[v].phone;
+    tag.style.display = 'inline-flex';
+  } else {
+    tag.style.display = 'none';
+  }
+}
+
+function renderNaturezas() {
+  const grid = document.getElementById('natureza-grid');
+  grid.innerHTML = '';
+  NATUREZAS.forEach(n => {
+    const item = document.createElement('div');
+    item.className = 'natureza-item' + (selectedNat.has(n.id) ? ' selected' : '');
+    item.innerHTML = `<div class="nat-check"><div class="nat-check-inner"></div></div><span class="nat-label">${n.label}</span>`;
+    item.onclick = () => {
+      if (selectedNat.has(n.id)) selectedNat.delete(n.id);
+      else selectedNat.add(n.id);
+      renderNaturezas();
+      updateRelato();
+    };
+    grid.appendChild(item);
+  });
+}
+
+function updateRelato() {
+  const vtr = document.getElementById('viatura').value.trim();
+  const preview = document.getElementById('relato-preview');
+  const selecionadas = NATUREZAS.filter(n => selectedNat.has(n.id));
+  const regComLocal = registros.filter(r => r.local);
+
+  if (!vtr || selecionadas.length === 0 || regComLocal.length === 0) {
+    preview.innerHTML = '<span style="color:var(--text-muted);font-family:var(--font);font-size:12px;">Configure os registros, viatura e naturezas para visualizar.</span>';
+    return;
+  }
+
+  const blocks = regComLocal.map((r, i) => {
+    const loc = LOCAIS_MAP[r.local];
+    const linhas = selecionadas.map(n =>
+      `EQUIPE DA <span class="relato-var">VTR ${vtr}</span> ${n.relato} ${loc.label.toUpperCase()} — ${loc.bairro.toUpperCase()} — GOIÂNIA.`
+    ).join('\n');
+    return `<div class="relato-block"><div class="relato-block-label">RAI ${i+1} · ${r.horario} · ${loc.label}</div>${linhas}</div>`;
+  });
+
+  preview.innerHTML = blocks.join('');
+}
+
+function renderHistorico() {
+  const body = document.getElementById('historico-body');
+  if (historico.length === 0) {
+    body.innerHTML = '<div class="hist-empty">Nenhuma RAI gerada ainda hoje.</div>';
+    return;
+  }
+  body.innerHTML = historico.map(h => `
+    <div class="hist-row">
+      <span class="hist-date">${h.data}</span>
+      <span class="hist-local">${h.local}</span>
+      <span class="hist-time">${h.horario}</span>
+      <span class="hist-rai">${h.rai}</span>
+      <span class="badge ${h.status === 'Gerada' ? 'badge-ok' : 'badge-err'}">${h.status}</span>
+      <button class="btn-copy" onclick="copiarRAI('${h.rai}', this)" ${h.status !== 'Gerada' ? 'disabled' : ''}>Copiar</button>
+    </div>
+  `).join('');
+}
+
+function copiarRAI(rai, btn) {
+  navigator.clipboard.writeText(rai).then(() => {
+    btn.textContent = 'Copiado!';
+    setTimeout(() => btn.textContent = 'Copiar', 2000);
+    showToast('RAI ' + rai + ' copiada');
+  });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function limpar() {
+  document.getElementById('usuario').value = '';
+  document.getElementById('senha').value = '';
+  document.getElementById('auth-code').value = '';
+  document.getElementById('area-select').value = '';
+  document.getElementById('viatura').value = '';
+  document.getElementById('phone-tag').style.display = 'none';
+  registros = [{ local: '', horario: '12:00' }];
+  selectedNat = new Set();
+  renderRegistros();
+  renderNaturezas();
+}
+
+async function executar() {
+  const usuario = document.getElementById('usuario').value.trim();
+  const senha = document.getElementById('senha').value.trim();
+  const code = document.getElementById('auth-code').value.replace(/\s/g,'');
+  const vtr = document.getElementById('viatura').value.trim();
+  const regValidos = registros.filter(r => r.local);
+
+  if (!usuario || !senha || !code) { showToast('Preencha as credenciais SSP-GO'); return; }
+  if (!vtr) { showToast('Informe o número da viatura'); return; }
+  if (regValidos.length === 0) { showToast('Configure ao menos um registro com local'); return; }
+  if (selectedNat.size === 0) { showToast('Selecione ao menos uma natureza'); return; }
+
+  const btn = document.getElementById('btn-executar');
+  btn.disabled = true;
+  const wrap = document.getElementById('progress-wrap');
+  const stepsEl = document.getElementById('progress-steps');
+  const fillEl = document.getElementById('progress-fill');
+  const pctEl = document.getElementById('progress-pct');
+  const textEl = document.getElementById('progress-text');
+
+  wrap.classList.add('show');
+  stepsEl.innerHTML = '';
+
+  const setProgress = (pct, label) => {
+    fillEl.style.width = pct + '%';
+    pctEl.textContent = Math.round(pct) + '%';
+    textEl.textContent = label;
+  };
+  const addStep = (label, status) => {
+    const s = document.createElement('div');
+    s.className = 'progress-step' + (status === 'run' ? ' running' : status === 'done' ? ' done' : '');
+    s.innerHTML = (status === 'run' ? '<div class="step-dot spin"></div>' : '<div class="step-dot"></div>') + `<span>${label}</span>`;
+    stepsEl.appendChild(s);
+    return s;
+  };
+  const delay = ms => new Promise(r => setTimeout(r, ms));
+
+  const s1 = addStep('Conectando ao SSP-GO...', 'run');
+  setProgress(5, 'Autenticando...');
+  await delay(1200);
+  s1.className = 'progress-step done'; s1.querySelector('span').textContent = 'Login realizado com sucesso';
+
+  const s2 = addStep('Abrindo formulário de atendimento...', 'run');
+  setProgress(15, 'Navegando no sistema...');
+  await delay(900);
+  s2.className = 'progress-step done'; s2.querySelector('span').textContent = 'Formulário aberto';
+
+  const hoje = new Date();
+  const dataStr = `${String(hoje.getDate()).padStart(2,'0')}/${String(hoje.getMonth()+1).padStart(2,'0')} ${String(hoje.getHours()).padStart(2,'0')}:${String(hoje.getMinutes()).padStart(2,'0')}`;
+
+  for (let i = 0; i < regValidos.length; i++) {
+    const r = regValidos[i];
+    const loc = LOCAIS_MAP[r.local];
+    const sn = addStep(`Registrando RAI ${i+1} — ${loc.label} (${r.horario})...`, 'run');
+    const pct = 15 + ((i + 1) / regValidos.length) * 80;
+    setProgress(pct - 10, `Preenchendo registro ${i+1} de ${regValidos.length}...`);
+    await delay(1500 + Math.random() * 500);
+
+    const raiNum = '2026/' + String(Math.floor(100000 + Math.random() * 900000)).substring(0, 6);
+    sn.className = 'progress-step done';
+    sn.querySelector('span').textContent = `RAI ${i+1} gerada — ${raiNum}`;
+
+    historico.unshift({ data: dataStr, local: loc.label, horario: r.horario, rai: raiNum, status: 'Gerada' });
+    renderHistorico();
+    setProgress(pct, `Registro ${i+1} concluído`);
+  }
+
+  setProgress(100, 'Automação concluída!');
+  await delay(400);
+  btn.disabled = false;
+  wrap.classList.remove('show');
+  showToast(regValidos.length + ' RAI(s) gerada(s) com sucesso');
+}
+
+document.getElementById('auth-code').addEventListener('input', function() {
+  let v = this.value.replace(/\D/g,'');
+  if (v.length > 3) v = v.slice(0,3) + ' ' + v.slice(3,6);
+  this.value = v;
+});
+
+renderRegistros();
+renderNaturezas();
+</script>
+</body>
+</html>
